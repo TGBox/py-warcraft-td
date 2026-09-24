@@ -9,24 +9,36 @@ GridCoord = Tuple[int, int]
 PixelCoord = Tuple[float, float]
 
 
-def grid_to_pixel(coord: GridCoord) -> PixelCoord:
+def grid_to_pixel(
+    coord: GridCoord,
+    cell_size: int = CELL_SIZE,
+    offset_x: int = GRID_OFFSET_X,
+    offset_y: int = GRID_OFFSET_Y,
+) -> PixelCoord:
     """Convert grid cell (col, row) to world pixel center (x, y)."""
     col, row = coord
-    x = GRID_OFFSET_X + col * CELL_SIZE + CELL_SIZE / 2.0
-    y = GRID_OFFSET_Y + row * CELL_SIZE + CELL_SIZE / 2.0
+    x = offset_x + col * cell_size + cell_size / 2.0
+    y = offset_y + row * cell_size + cell_size / 2.0
     return (x, y)
 
 
-def pixel_to_grid(pixel: PixelCoord) -> Optional[GridCoord]:
+def pixel_to_grid(
+    pixel: PixelCoord,
+    cols: int = GRID_COLS,
+    rows: int = GRID_ROWS,
+    cell_size: int = CELL_SIZE,
+    offset_x: int = GRID_OFFSET_X,
+    offset_y: int = GRID_OFFSET_Y,
+) -> Optional[GridCoord]:
     """Convert screen pixel coordinates to grid cell (col, row). Returns None if out of bounds."""
     x, y = pixel
-    rel_x = x - GRID_OFFSET_X
-    rel_y = y - GRID_OFFSET_Y
+    rel_x = x - offset_x
+    rel_y = y - offset_y
     if rel_x < 0 or rel_y < 0:
         return None
-    col = int(rel_x // CELL_SIZE)
-    row = int(rel_y // CELL_SIZE)
-    if 0 <= col < GRID_COLS and 0 <= row < GRID_ROWS:
+    col = int(rel_x // cell_size)
+    row = int(rel_y // cell_size)
+    if 0 <= col < cols and 0 <= row < rows:
         return (col, row)
     return None
 

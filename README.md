@@ -1,67 +1,84 @@
 # ⚡ py-warcraft-td: Element Tower Defense (Warcraft III Adaptation)
 
-Eine moderne, native Python-Desktop-Adaption der legendären Warcraft III Custom Map **Element TD** (Element Tower Defense), kombiniert mit freiem Labyrinth-Bauen (**Mazing** via dynamischer A\*-Pfadsuche).
+Eine moderne, native Python-Desktop-Adaption der legendären Warcraft III Custom Map **Element TD** (Element Tower Defense), kombiniert mit freiem Labyrinth-Bauen (**Mazing** via dynamischer A\*-Pfadsuche), prozeduralen Sprites und Vektor-Icons sowie nativer Unterstützung für **1920x1080 (16:9 Full HD)** und **2560x1080 (21:9 Ultrawide)** inkl. **Vollbildmodus**.
 
 ---
 
-## 🌟 Hauptfeatures & Spielmechaniken
+## 🌟 Grafische Neuerungen & Visuelle Highlights
+
+### 🎨 Prozedural generierte Sprites (Pixel-Art / WC3-Stil)
+
+- **Gegner & Bosse:**
+  - Jede Gegner-Kategorie besitzt ein individuelles, dynamisch skaliertes Modell:
+    - *Bosse & Elementarwächter:* Gewaltige Basaltpanzer, pulsierende Elementarauren, goldene Kronen und leuchtende Kerne.
+    - *Flugeinheiten:* Große Schwingen mit Flügelschlag-Animation und realistischem Bodenschatten.
+    - *Schnelle Läufer (Wölfe / Raptoren):* Stromlinienförmiger Körper mit Geschwindigkeitsstreifen und Kämmen.
+    - *Tanks / Schwere Brecher:* Wuchtige Felsenschultern, Eisenpanzerung und Zwillingsaugen.
+    - *Schwarm-Kriecher:* Kompakte Mehrbeiner-Insektoiden.
+- **Türme:**
+  - Mehrschichtige Steinfundamente, Rumpfverzierungen und elementare Runenböden.
+  - Pfeilturm mit Holzarmbrust und Pfeilspitze; Kanonenturm mit genieteter Eisenhaubitze.
+  - Elementartürme mit schwebenden Kristallkernen, Spuren und orbitalen Elementarkugeln bei Dual- und Triple-Kombinationen.
+  - Goldene Stufen-Indikatoren (Pips) für Tier 1 bis Tier 3.
+
+### 🛡️ Gestochen scharfe Vektor-Icons (Keine Vierecke / Tofu-Boxen mehr!)
+
+- Alle Schriftart-Emojis wurden durch ein eigenes Vektor-Icon-System ersetzt:
+  - **Währung:** Geprägte Goldmünze mit Glanzkante.
+  - **Leben:** Rubinrotes Herz mit Lichtreflex.
+  - **Kampf & Altar:** Gekreuzte Silberklingen mit Goldknauf.
+  - **Flugeinheiten:** Ausgebreitete Adlerschwingen.
+  - **Schloss:** Messing-Vorhängeschloss für noch gesperrte Elementkombinationen.
+  - **Element-Abzeichen:** Eigene Symbole für Licht (Sonne/Stern), Dunkelheit (Mondsichel), Wasser (Tropfen), Feuer (Flamme), Natur (Smaragdblatt) und Erde (Gebirgsgipfel).
+  - **UI-Steuerung:** Eigene Icons für Play, Pause, Fast-Forward, Upgrade-Pfeil und Schließen-Kreuz.
+
+---
+
+## 🖥️ Auflösungen & Vollbildmodus
+
+Das Spiel passt seine Benutzeroberfläche und das Spielfeld dynamisch an:
+
+- **1920 x 1080 (16:9 Full HD):** 26 Spalten x 17 Zeilen Spielfeld mit 48px Zellgröße und 588px Sidebar.
+- **2560 x 1080 (21:9 Ultrawide):** 34 Spalten x 17 Zeilen Spielfeld mit 48px Zellgröße und 828px breiter Sidebar mit **zweispaltigen Turmkarten**!
+- **1360 x 768 (Fenstermodus):** Kompaktes Fenster-Layout.
+- **Vollbild (Fullscreen):** Jederzeit im Spiel mit **`F11`** (oder über den Button in der oberen Leiste) umschaltbar!
+
+---
+
+## 🌟 Spielmechaniken
 
 ### 1. Der 6-Elemente-Vorteilskreis
-Jeder Turm und jeder Gegner gehört einem bestimmten Element an. Der Kreis der Elemente bestimmt den ausgeteilten Schaden:
+
 $$\text{Licht} \rightarrow \text{Dunkelheit} \rightarrow \text{Wasser} \rightarrow \text{Feuer} \rightarrow \text{Natur} \rightarrow \text{Erde} \rightarrow \text{Licht}$$
 
-- **Überlegenes Element (200% Schaden):** Das angreifende Element schlägt das Ziel im Kreis (z. B. Licht gegen Dunkelheit, Feuer gegen Natur).
-- **Unterlegenes Element (50% Schaden):** Das angreifende Element ist schwach gegen seinen Konter (z. B. Dunkelheit gegen Licht, Natur gegen Feuer).
-- **Neutral (100% Schaden):** Nicht benachbarte Elemente oder physische Angriffe (Pfeil / Kanone).
+- **Überlegen (200% Schaden):** Das angreifende Element schlägt das Ziel im Kreis.
+- **Unterlegen (50% Schaden):** Das Ziel resistiert dem Angriff.
+- **Neutral (100% Schaden):** Physischer Schaden oder nicht benachbarte Elemente.
 
 ### 2. Freies Labyrinth-Bauen (Mazing) & Fliegende Einheiten
-- **Bodeneinheiten:** Suchen mithilfe von dynamischer **A\*-Wegfindung** in Echtzeit den kürzesten Pfad durch das von dir errichtete Turmlabyrinth.
-- **Wegblockierungs-Schutz:** Türme können nicht platziert werden, wenn sie den Weg von Start zu Ziel komplett versperren oder aktive Einheiten einsperren würden.
-- **Fliegende Einheiten:** Fliegen schnurgerade quer über die Karte und ignorieren Mauern! Nur Türme mit Luftabwehrfähigkeit können sie abschießen.
-- **Leak-Respawn:** Einheiten, die das Ziel erreichen, ziehen Leben ab (1 Leben bzw. 3 bei Bossen) und **erscheinen am Startpunkt mit ihren verbleibenden Lebenspunkten erneut**, sodass du weiterhin die Chance hast, sie für ihr Gold zu besiegen!
 
-### 3. Das vollständige Kompendium aller 43 Türme
-- **Starter-Türme (Stufe 1–3):**
-  - **Pfeilturm:** Hohe Angriffsgeschwindigkeit gegen Boden und Luft.
-  - **Kanonenturm:** Massiver Flächenschaden gegen Bodengruppen.
-- **6 Basis-Elementartürme (Stufe 1–3):**
-  - `Licht`: Extremer Sofort-Laserstrahl mit großer Reichweite (Boden & Luft).
-  - `Dunkelheit`: Gewaltiger Seelenkugel-Einzelschaden (Boden & Luft).
-  - `Wasser`: Spritzende Gezeitenwellen mit Flächen-Verlangsamung.
-  - `Feuer`: Explosive Feuerbälle mit Flächenbrand über Zeit (Boden & Luft).
-  - `Natur`: Ätzende Giftsporen mit anhaltendem Toxin.
-  - `Erde`: Tektonische Schockwellen mit Betäubung und Rüstungsbrecher.
-- **15 Dual-Elementartürme (Alle 2er-Kombinationen):**
-  1. *Täuschung (Licht + Dunkelheit):* Phantom-Kritische Treffer mit hohem DPS.
-  2. *Eis (Licht + Wasser):* 50% Frostverlangsamung im Radius.
-  3. *Elektrizität (Licht + Feuer):* Kettenblitz springt auf 4 Feinde über.
-  4. *Sonne (Licht + Natur):* Solarer Strahl mit Rüstungsdurchdringung.
-  5. *Quark / Gold (Licht + Erde):* Subatomare Impulse mit +3 Extragold pro Kill.
-  6. *Dunst (Dunkelheit + Wasser):* Giftiger Miasmanebel mit Flächen-Slow.
-  7. *Verdammnis (Dunkelheit + Feuer):* Todesfluch mit massiver Explosion.
-  8. *Gift (Dunkelheit + Natur):* Aggressives Gift über 5 Sekunden.
-  9. *Eisen / Schmiede (Dunkelheit + Erde):* Zerschlägt Rüstung (+35% erlittener Schaden).
-  10. *Dampf (Wasser + Feuer):* Extrem schnelle Dampfprojektile.
-  11. *Geysir (Wasser + Natur):* Kochende Wasserfontänen mit Splash.
-  12. *Schlamm (Wasser + Erde):* Zäher Matsch hemmt Bewegung um 45%.
-  13. *Verbrennung (Feuer + Natur):* Napalmboden entzündet alles.
-  14. *Magma (Feuer + Erde):* Glühendes Lavagestein mit riesigem Krater.
-  15. *Wurzeln (Natur + Erde):* Umschlingende Ranken mit Festhalte-Effekt.
-- **20 Triple-Elementartürme (Alle 20 3er-Kombinationen):**
-  - *Oblivion, Pure Laser, Life, Eclipse, Prisma, Wellspring, Polar, Solar Flare, Forge, Gaia, Abyssal, Plague, Mire, Corrosion, Meteor, Rot, Biohazard, Obsidian, Tsunami, Juggernaut.*
+- **Bodeneinheiten:** Berechnen in Echtzeit den kürzesten Weg via **A\*-Pfadsuche** um errichtete Türme.
+- **Wegblockierungs-Schutz:** Verhindert das vollständige Zubauen des Durchgangs.
+- **Flugeinheiten:** Nehmen die direkte Luftlinie quer über die Karte (nur von Luftabwehr treffbar).
+- **Leak-Respawn:** Durchgebrochene Monster ziehen Leben ab und **erscheinen am Start mit ihren Rest-HP erneut**, sodass du weiterhin die Chance auf das Kopfgeld hast!
+
+### 3. Das vollständige 43-Turm-Kompendium
+
+- **Starter:** Pfeilturm (Boden/Luft), Kanonenturm (Fläche Boden).
+- **6 Basis-Elementartürme (Stufe 1–3):** Licht, Dunkelheit, Wasser, Feuer, Natur, Erde.
+- **15 Dual-Türme:** Täuschung, Eis, Elektrizität, Sonne, Quark (Gold), Dunst, Verdammnis, Gift, Eisen, Dampf, Geysir, Schlamm, Verbrennung, Magma, Wurzeln.
+- **20 Triple-Türme:** Oblivion, Pure Laser, Life, Eclipse, Prisma, Wellspring, Polar, Solar Flare, Forge, Gaia, Abyssal, Plague, Mire, Corrosion, Meteor, Rot, Biohazard, Obsidian, Tsunami, Juggernaut.
 
 ### 4. Elementarwächter & Beschwörungs-Altar
-- Alle 5 Wellen (Welle 5, 10, 15, 20 ...) erhältst du einen **Wächter-Beschwörungstoken**.
-- Klicke auf den **Wächter-Altar** oben im HUD, um einen Elementarwächter deiner Wahl (Licht, Schatten, Wasser, Flammen, Natur, Erde) in die Arena zu rufen.
-- Besiegst du den Wächter-Boss, erhältst du **+1 Essenz** dieses Elements, wodurch du neue Grundstufen und Hybridtürme freischaltest!
-- *Alternative:* Tausche den Token gegen eine dauerhafte **Erhöhung deiner Zinsrate um +0.5%** ein!
 
-### 5. Das Zinseszins-System
-- Alle **15 Sekunden** schüttet die Bank **2.0% Zinsen** auf dein ungenutztes Gold aus.
-- Sparsamkeit und strategisches Haushalten werden mit exponentiellem Zinseszins belohnt!
+- Alle 5 Wellen erhältst du einen **Beschwörungstoken**.
+- Rufe im **Wächter-Altar** einen Elementarwächter deiner Wahl heraus.
+- Bei Sieg erhältst du **+1 Essenz** dieses Elements für neue Turmstufen und Kombinationen!
+- *Alternative:* Tausche den Token gegen dauerhafte **+0.5% Zinsen** ein.
 
-### 6. Prozedurale Audio-Synthese (NumPy & Pygame Mixer)
-- Keine externen Audio-Dateien nötig: Alle 18 Soundeffekte (Laser, Donner, Blitze, Frost, Münzen, Fanfaren) werden in Echtzeit mathematisch synthetisiert.
+### 5. Zinsen & Wirtschaft
+
+- Alle **15 Sekunden** erhältst du **2.0% Zinsen** auf dein nicht ausgegebenes Gold.
 
 ---
 
@@ -69,27 +86,36 @@ $$\text{Licht} \rightarrow \text{Dunkelheit} \rightarrow \text{Wasser} \rightarr
 
 | Taste / Aktion | Funktion |
 | :--- | :--- |
-| **Linksklick** | Turm auswählen, bauen, inspizieren oder Menü bedienen |
-| **Rechtsklick / Esc** | Turm-Platzierung abbrechen / Turmauswahl aufheben |
+| **`F11`** | **Vollbildmodus aktivieren / deaktivieren** |
+| **`X` / `Entf`** | **Löschen- / Radierer-Modus umschalten** (Türme einzeln oder mit gedrückter Maustaste abreißen) |
+| **Linksklick** | Turm auswählen, bauen, inspizieren, abreißen oder Menüs bedienen |
+| **Gedrückt halten & Ziehen (im Löschmodus)** | **Radierer:** Zieht über mehrere Türme, um sie blitzschnell ohne Abfrage zu verkaufen! |
+| **Rechtsklick / Esc** | Bauen abbrechen / Löschmodus beenden / Turmauswahl aufheben |
 | **Leertaste (`Space`)** | Spiel pausieren / fortsetzen |
 | **`1`, `2`, `3`** | Spielgeschwindigkeit (1x, 2x, 4x) |
-| **`U`** | Ausgewählten platzierten Turm aufwerten (Upgrade) |
-| **`S`** | Ausgewählten platzierten Turm verkaufen (Sell, 80% Rückerstattung) |
+| **`U`** | Ausgewählten Turm verbessern (Upgrade) |
+| **`S`** | Ausgewählten Turm verkaufen (80% Rückerstattung) |
 
 ---
 
 ## 🚀 Spiel starten
 
-### Voraussetzungen
-- Python $\ge$ 3.12 (oder Python 3.14)
-- [`uv`](https://github.com/astral-sh/uv) (empfohlen) oder Standard-`pip`
+### Starten mit `uv`
 
-### Starten mit `uv`:
 ```bash
-# Spiel direkt starten
+# Spiel standardmäßig auf 1920x1080 starten
 uv run py-warcraft-td
 
-# Schnelles 20-Wellen-Spiel direkt starten
+# Direkt im Vollbildmodus starten
+uv run py-warcraft-td --fullscreen
+
+# Auf 2560x1080 (21:9 Ultrawide) starten
+uv run py-warcraft-td --ultrawide
+
+# 21:9 Ultrawide im Vollbildmodus
+uv run py-warcraft-td --ultrawide --fullscreen
+
+# Schnelles 20-Wellen-Spiel starten
 uv run py-warcraft-td --quick --difficulty Hard
 
 # Tests ausführen

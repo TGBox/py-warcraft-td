@@ -4,22 +4,37 @@ import math
 from typing import Callable, List, Optional, Tuple
 import pygame
 from py_warcraft_td.audio import AudioManager
-from py_warcraft_td.config import CELL_SIZE, TOWER_SELL_RATIO
+from py_warcraft_td.config import CELL_SIZE, LayoutConfig, TOWER_SELL_RATIO
 from py_warcraft_td.creeps import Creep
 from py_warcraft_td.elements import Element, get_element_color
 from py_warcraft_td.particles import VisualEffectsManager
 from py_warcraft_td.pathfinding import GridCoord, grid_to_pixel
 from py_warcraft_td.projectiles import ChainLightningEffect, InstantBeam, Projectile
+from py_warcraft_td.sprites import SpriteRenderer
 from py_warcraft_td.towers.tower_catalog import TowerDefinition, get_tower_def
 
 
 class Tower:
-    """An instantiated tower on the game grid."""
+    """An instantiated tower on the game grid with procedural sprite rendering."""
 
-    def __init__(self, col: int, row: int, tower_def: TowerDefinition):
+    def __init__(
+        self,
+        col: int,
+        row: int,
+        tower_def: TowerDefinition,
+        layout: Optional[LayoutConfig] = None,
+    ):
         self.col = col
         self.row = row
-        pixel_pos = grid_to_pixel((col, row))
+        self.layout = layout
+
+        if layout:
+            pixel_pos = layout.grid_to_pixel((col, row))
+            self.cell_size = layout.cell_size
+        else:
+            pixel_pos = grid_to_pixel((col, row))
+            self.cell_size = CELL_SIZE
+
         self.x = pixel_pos[0]
         self.y = pixel_pos[1]
 
@@ -62,7 +77,6 @@ class Tower:
             if c.is_dead or c.has_leaked:
                 continue
 
-            # Check air/ground targeting capability
             if c.is_flying and self.definition.targets == "ground":
                 continue
             if not c.is_flying and self.definition.targets == "air":
@@ -76,7 +90,6 @@ class Tower:
             return None
 
         if self.targeting_mode == "first":
-            # Target creep furthest along its path
             candidates.sort(key=lambda item: item[1].total_distance_traveled, reverse=True)
             return candidates[0][1]
         elif self.targeting_mode == "strongest":
@@ -132,18 +145,15 @@ class Tower:
         audio.play(self.definition.sound_effect, volume=0.45)
 
         if atk_type == "instant_beam":
-            # Instant laser/light attack
             beams.append(InstantBeam(self.x, self.y, target.x, target.y, color))
             dmg, mult = target.take_damage(self.definition.damage, elem)
             self.damage_dealt += dmg
 
-            # Floating text feedback
             txt_color = (255, 230, 80) if mult == 2.0 else ((160, 160, 170) if mult == 0.5 else color)
             text_str = f"{int(dmg)}!" if mult == 2.0 else f"{int(dmg)}"
             vfx.add_floating_text(text_str, target.x, target.y, txt_color, size=15 if mult == 2.0 else 13)
             vfx.add_sparks(target.x, target.y, color, count=6, speed=70.0)
 
-            # Apply abilities
             ability = self.definition.ability
             if ability.burn_dps > 0:
                 target.apply_burn(ability.burn_dps, ability.burn_duration)
@@ -154,7 +164,6 @@ class Tower:
                 wrapped_kill(target, ability.gold_bounty_bonus)
 
         elif atk_type == "chain":
-            # Chain lightning jumping between multiple targets
             ability = self.definition.ability
             max_bounces = ability.chain_bounces or 4
             chain_targets: List[Creep] = [target]
@@ -195,41 +204,11 @@ class Tower:
             chain_lightnings.append(ChainLightningEffect(chain_points, color=color))
 
         else:
-            # Standard Projectile or Splash Projectile
             proj = Projectile(self.x, self.y, target, self.definition, on_kill_callback=wrapped_kill)
             projectiles.append(proj)
 
     def draw(self, surface: pygame.Surface, is_selected: bool = False) -> None:
-        """Render the tower on the grid."""
-        half = CELL_SIZE / 2.0 - 2.0
-        rect = pygame.Rect(int(self.x - half), int(self.y - half), int(half * 2), int(half * 2))
-
-        # Base tower body
-        elem = self.definition.elements[0] if self.definition.elements else Element.NONE
-        primary_color, secondary_color = get_element_color(elem)
-
-        # Draw rounded tower base
-        pygame.draw.rect(surface, secondary_color, rect, border_radius=6)
-        inner_rect = rect.inflate(-6, -6)
-        pygame.draw.rect(surface, primary_color, inner_rect, border_radius=4)
-
-        # If dual or triple, draw color accents
-        if len(self.definition.elements) > 1:
-            sec_elem = self.definition.elements[1]
-            sec_col, _ = get_element_color(sec_elem)
-            accent_rect = pygame.Rect(rect.centerx - 4, rect.centery - 4, 8, 8)
-            pygame.draw.rect(surface, sec_col, accent_rect, border_radius=2)
-            if len(self.definition.elements) > 2:
-                third_elem = self.definition.elements[2]
-                third_col, _ = get_element_color(third_elem)
-                pygame.draw.circle(surface, third_col, (rect.centerx, rect.centery), 3)
-
-        # Draw tier dots
-        for t in range(self.definition.tier):
-            dot_x = int(rect.left + 5 + t * 6)
-            dot_y = int(rect.bottom - 6)
-            pygame.draw.circle(surface, (255, 255, 255), (dot_x, dot_y), 2)
-
-        # Selected outline
-        if is_selected:
-            pygame.draw.rect(surface, (255, 240, 100), rect, width=2, border_radius=6)
+        """Render the tower using its procedural sprite."""
+        s = self.cell_size
+        sprite = SpriteRenderer.get_tower_sprite(self.definition, s, is_selected=is_selected)
+        surface.blit(sprite, (int(self.x - s / 2.0), int(self.y - s / 2.0)))

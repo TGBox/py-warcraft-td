@@ -2,13 +2,15 @@
 
 import math
 from typing import Dict, List, Optional, Tuple
-from py_warcraft_td.config import CELL_SIZE, GOAL_CELL, SPAWN_CELL
+import pygame
+from py_warcraft_td.config import CELL_SIZE, GOAL_CELL, LayoutConfig, SPAWN_CELL
 from py_warcraft_td.elements import Element, get_element_color, get_element_multiplier
 from py_warcraft_td.pathfinding import GridCoord, PixelCoord, grid_to_pixel
+from py_warcraft_td.sprites import SpriteRenderer
 
 
 class Creep:
-    """Invading enemy unit in Element TD."""
+    """Invading enemy unit in Element TD with procedural sprite rendering."""
 
     def __init__(
         self,
@@ -22,6 +24,7 @@ class Creep:
         is_flying: bool = False,
         modifier: str = "normal",  # "normal", "fast", "tank", "swarm", "boss", "shielded", "regen"
         path: Optional[List[GridCoord]] = None,
+        layout: Optional[LayoutConfig] = None,
     ):
         self.id = creep_id
         self.name = name
@@ -33,23 +36,35 @@ class Creep:
         self.gold_reward = gold_reward
         self.is_flying = is_flying
         self.modifier = modifier
+        self.layout = layout
 
-        # Visual dimensions
-        self.radius = 12.0 if not is_flying else 14.0
+        # Visual dimensions scaled to layout
+        c_size = layout.cell_size if layout else CELL_SIZE
+        scale = c_size / 36.0
+
+        self.radius = 13.0 * scale
         if modifier == "boss":
-            self.radius = 18.0
+            self.radius = 22.0 * scale
         elif modifier == "swarm":
-            self.radius = 8.0
+            self.radius = 9.0 * scale
+        elif is_flying:
+            self.radius = 16.0 * scale
+        elif modifier == "tank":
+            self.radius = 17.0 * scale
 
         # Position and Navigation
         self.path: List[GridCoord] = path or []
         self.path_index: int = 0
-        spawn_px = grid_to_pixel(SPAWN_CELL)
+
+        sp_cell = layout.spawn_cell if layout else SPAWN_CELL
+        gl_cell = layout.goal_cell if layout else GOAL_CELL
+
+        spawn_px = layout.grid_to_pixel(sp_cell) if layout else grid_to_pixel(sp_cell)
         self.x: float = spawn_px[0]
         self.y: float = spawn_px[1]
 
         # Flying target
-        goal_px = grid_to_pixel(GOAL_CELL)
+        goal_px = layout.grid_to_pixel(gl_cell) if layout else grid_to_pixel(gl_cell)
         self.goal_x: float = goal_px[0]
         self.goal_y: float = goal_px[1]
 
@@ -72,13 +87,27 @@ class Creep:
         self.is_dead: bool = False
         self.has_leaked: bool = False
         self.total_distance_traveled: float = 0.0
+        self.anim_tick: int = 0
 
     @property
     def current_grid_cell(self) -> GridCoord:
         """Approximate current cell coordinates."""
+        if self.layout:
+            grid_pos = self.layout.pixel_to_grid((self.x, self.y))
+            if grid_pos:
+                return grid_pos
+            col = int(round((self.x - self.layout.grid_offset_x - self.layout.cell_size / 2.0) / self.layout.cell_size))
+            row = int(round((self.y - self.layout.grid_offset_y - self.layout.cell_size / 2.0) / self.layout.cell_size))
+            return (max(0, col), max(0, row))
+
         col = int(round((self.x - 24.0 - CELL_SIZE / 2.0) / CELL_SIZE))
         row = int(round((self.y - 80.0 - CELL_SIZE / 2.0) / CELL_SIZE))
         return (max(0, col), max(0, row))
+
+    def _coord_to_pixel(self, coord: GridCoord) -> PixelCoord:
+        if self.layout:
+            return self.layout.grid_to_pixel(coord)
+        return grid_to_pixel(coord)
 
     def update_path(self, new_path: List[GridCoord]) -> None:
         """Update waypoint path for ground creep after maze modifications."""
@@ -119,28 +148,20 @@ class Creep:
         """Push ground creep backwards along its path."""
         if self.is_flying or self.path_index <= 0:
             return
-        # Move back one or two waypoints
         self.path_index = max(0, self.path_index - 1)
         target_cell = self.path[self.path_index]
-        target_px = grid_to_pixel(target_cell)
+        target_px = self._coord_to_pixel(target_cell)
         self.x = (self.x + target_px[0]) / 2.0
         self.y = (self.y + target_px[1]) / 2.0
 
     def take_damage(self, raw_damage: float, attack_elem: Element) -> Tuple[float, float]:
-        """Apply damage based on element multiplier and active status effects.
-
-        Returns:
-            (actual_damage_dealt, multiplier)
-        """
+        """Apply damage based on element multiplier and active status effects."""
         mult = get_element_multiplier(attack_elem, self.armor_element)
-
         damage = raw_damage * mult
 
-        # Apply Armor Sunder modifier
         if self.sunder_timer > 0:
             damage *= (1.0 + self.sunder_factor)
 
-        # Apply Shielded trait
         if self.modifier == "shielded":
             damage *= 0.75
 
@@ -156,10 +177,11 @@ class Creep:
         if self.is_dead or self.has_leaked:
             return
 
+        self.anim_tick += 1
+
         # 1. Stun check
         if self.stun_timer > 0.0:
             self.stun_timer -= dt
-            # Still take DoT while stunned
         else:
             # 2. Movement
             current_speed = self.base_speed
@@ -170,7 +192,6 @@ class Creep:
                     self.slow_factor = 1.0
 
             if self.is_flying:
-                # Direct flight from current pos towards goal
                 dx = self.goal_x - self.x
                 dy = self.goal_y - self.y
                 dist = math.hypot(dx, dy)
@@ -184,28 +205,25 @@ class Creep:
                     self.y += (dy / dist) * step
                     self.total_distance_traveled += step
             else:
-                # Ground movement along waypoints
                 if self.path and self.path_index < len(self.path):
                     target_cell = self.path[self.path_index]
-                    target_px = grid_to_pixel(target_cell)
+                    target_px = self._coord_to_pixel(target_cell)
                     dx = target_px[0] - self.x
                     dy = target_px[1] - self.y
                     dist = math.hypot(dx, dy)
                     step = current_speed * dt
 
-                    if dist <= step or dist < 3.0:
+                    if dist <= step or dist < 4.0:
                         self.x = target_px[0]
                         self.y = target_px[1]
                         self.path_index += 1
                         if self.path_index >= len(self.path):
-                            # Reached final waypoint (goal)
                             self.has_leaked = True
                     else:
                         self.x += (dx / dist) * step
                         self.y += (dy / dist) * step
                         self.total_distance_traveled += step
                 else:
-                    # No remaining waypoints
                     self.has_leaked = True
 
         # 3. Status effect timers & DoT
@@ -232,12 +250,13 @@ class Creep:
 
         # 4. Regen trait
         if self.modifier == "regen" and not self.is_dead:
-            regen_amount = self.max_hp * 0.03 * dt  # 3% per second
+            regen_amount = self.max_hp * 0.03 * dt
             self.hp = min(self.max_hp, self.hp + regen_amount)
 
     def respawn_at_start(self, initial_path: List[GridCoord]) -> None:
         """Reset leaked creep to start with its current remaining HP."""
-        spawn_px = grid_to_pixel(SPAWN_CELL)
+        sp_cell = self.layout.spawn_cell if self.layout else SPAWN_CELL
+        spawn_px = self._coord_to_pixel(sp_cell)
         self.x = spawn_px[0]
         self.y = spawn_px[1]
         self.path = initial_path
@@ -249,3 +268,39 @@ class Creep:
         self.poison_timer = 0.0
         self.sunder_timer = 0.0
         self.stun_timer = 0.0
+
+    def draw(self, surface: pygame.Surface) -> None:
+        """Render the creep using its procedural sprite and dynamic healthbar."""
+        if self.is_dead or self.has_leaked:
+            return
+
+        cx, cy = int(self.x), int(self.y)
+        sprite_size = int(self.radius * 2.4)
+        # Even size
+        if sprite_size % 2 != 0:
+            sprite_size += 1
+
+        sprite = SpriteRenderer.get_creep_sprite(
+            self.armor_element, self.modifier, self.is_flying, sprite_size, self.anim_tick // 10
+        )
+        surface.blit(sprite, (cx - sprite_size // 2, cy - sprite_size // 2))
+
+        # Status effect aura
+        if self.slow_timer > 0:
+            pygame.draw.circle(surface, (100, 200, 255), (cx, cy), int(self.radius + 3), width=1)
+        if self.burn_timer > 0:
+            pygame.draw.circle(surface, (255, 120, 30), (cx, cy), int(self.radius + 4), width=1)
+        if self.poison_timer > 0:
+            pygame.draw.circle(surface, (80, 230, 90), (cx, cy), int(self.radius + 3), width=1)
+
+        # Health bar
+        hp_w = max(20, int(self.radius * 2.2))
+        hp_h = 4
+        hp_x = cx - hp_w // 2
+        hp_y = cy - int(self.radius) - 9
+
+        hp_ratio = max(0.0, min(1.0, self.hp / self.max_hp))
+        pygame.draw.rect(surface, (30, 20, 20), (hp_x, hp_y, hp_w, hp_h), border_radius=1)
+        bar_color = (60, 220, 90) if hp_ratio > 0.5 else ((240, 200, 50) if hp_ratio > 0.25 else (240, 50, 50))
+        pygame.draw.rect(surface, bar_color, (hp_x, hp_y, int(hp_w * hp_ratio), hp_h), border_radius=1)
+        pygame.draw.rect(surface, (10, 10, 15), (hp_x, hp_y, hp_w, hp_h), width=1, border_radius=1)

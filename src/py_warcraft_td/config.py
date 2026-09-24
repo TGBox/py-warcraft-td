@@ -1,43 +1,150 @@
-"""Configuration and constants for py-warcraft-td (Element TD)."""
+"""Configuration, constants, and dynamic resolution layout metrics for py-warcraft-td."""
 
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Dict, Tuple
 
-# Screen & Window Dimensions
-SCREEN_WIDTH = 1360
-SCREEN_HEIGHT = 768
+# Default Dimensions (Windowed fallback)
+DEFAULT_WIDTH = 1360
+DEFAULT_HEIGHT = 768
 FPS = 60
 
-# Grid Geometry
+# Static Defaults for backward compatibility
 GRID_COLS = 24
 GRID_ROWS = 17
 CELL_SIZE = 36
 GRID_OFFSET_X = 24
 GRID_OFFSET_Y = 80
-GRID_WIDTH = GRID_COLS * CELL_SIZE   # 864 px
-GRID_HEIGHT = GRID_ROWS * CELL_SIZE  # 612 px
-
-# Spawn & Exit Coordinates (in grid coordinates)
+GRID_WIDTH = GRID_COLS * CELL_SIZE
+GRID_HEIGHT = GRID_ROWS * CELL_SIZE
 SPAWN_CELL = (0, 8)
 GOAL_CELL = (GRID_COLS - 1, 8)
-
-# Sidebar UI Geometry
-SIDEBAR_X = GRID_OFFSET_X + GRID_WIDTH + 20  # 908 px
+SIDEBAR_X = GRID_OFFSET_X + GRID_WIDTH + 20
 SIDEBAR_Y = GRID_OFFSET_Y
-SIDEBAR_WIDTH = SCREEN_WIDTH - SIDEBAR_X - 24 # ~428 px
+SIDEBAR_WIDTH = DEFAULT_WIDTH - SIDEBAR_X - 24
 SIDEBAR_HEIGHT = GRID_HEIGHT
 
+
+@dataclass
+class LayoutConfig:
+    """Dynamic resolution metrics for 1360x768, 1920x1080 (16:9), and 2560x1080 (21:9 Ultrawide)."""
+    screen_width: int
+    screen_height: int
+    grid_cols: int
+    grid_rows: int
+    cell_size: int
+    grid_offset_x: int
+    grid_offset_y: int
+    grid_width: int
+    grid_height: int
+    spawn_cell: Tuple[int, int]
+    goal_cell: Tuple[int, int]
+    sidebar_x: int
+    sidebar_y: int
+    sidebar_width: int
+    sidebar_height: int
+    top_bar_height: int = 70
+    bottom_bar_height: int = 42
+
+    def grid_to_pixel(self, coord: Tuple[int, int]) -> Tuple[float, float]:
+        col, row = coord
+        x = self.grid_offset_x + col * self.cell_size + self.cell_size / 2.0
+        y = self.grid_offset_y + row * self.cell_size + self.cell_size / 2.0
+        return (x, y)
+
+    def pixel_to_grid(self, pixel: Tuple[float, float]) -> Tuple[int, int] | None:
+        x, y = pixel
+        rel_x = x - self.grid_offset_x
+        rel_y = y - self.grid_offset_y
+        if rel_x < 0 or rel_y < 0:
+            return None
+        col = int(rel_x // self.cell_size)
+        row = int(rel_y // self.cell_size)
+        if 0 <= col < self.grid_cols and 0 <= row < self.grid_rows:
+            return (col, row)
+        return None
+
+
+def create_layout_config(width: int, height: int) -> LayoutConfig:
+    """Create optimal layout metrics for the specified screen resolution."""
+    if width >= 2500:
+        # 21:9 Ultrawide (e.g. 2560x1080)
+        cols = 34
+        rows = 17
+        cell_size = 48
+        gw = cols * cell_size   # 1632 px
+        gh = rows * cell_size   # 816 px
+        gx = 36
+        gy = 86
+        sx = gx + gw + 28       # 1696 px
+        sy = gy
+        sw = width - sx - 36    # ~828 px
+        sh = gh
+        spawn = (0, 8)
+        goal = (cols - 1, 8)
+
+    elif width >= 1800:
+        # 16:9 Full HD (e.g. 1920x1080)
+        cols = 26
+        rows = 17
+        cell_size = 48
+        gw = cols * cell_size   # 1248 px
+        gh = rows * cell_size   # 816 px
+        gx = 32
+        gy = 86
+        sx = gx + gw + 24       # 1304 px
+        sy = gy
+        sw = width - sx - 28    # ~588 px
+        sh = gh
+        spawn = (0, 8)
+        goal = (cols - 1, 8)
+
+    else:
+        # Compact / Windowed (e.g. 1360x768)
+        cols = 24
+        rows = 17
+        cell_size = 36
+        gw = cols * cell_size   # 864 px
+        gh = rows * cell_size   # 612 px
+        gx = 24
+        gy = 80
+        sx = gx + gw + 20       # 908 px
+        sy = gy
+        sw = width - sx - 24    # ~428 px
+        sh = gh
+        spawn = (0, 8)
+        goal = (cols - 1, 8)
+
+    return LayoutConfig(
+        screen_width=width,
+        screen_height=height,
+        grid_cols=cols,
+        grid_rows=rows,
+        cell_size=cell_size,
+        grid_offset_x=gx,
+        grid_offset_y=gy,
+        grid_width=gw,
+        grid_height=gh,
+        spawn_cell=spawn,
+        goal_cell=goal,
+        sidebar_x=sx,
+        sidebar_y=sy,
+        sidebar_width=sw,
+        sidebar_height=sh,
+    )
+
+
 # Palette (Warcraft 3 Dark Fantasy & Elemental Accents)
-BG_DARK = (16, 18, 24)
-BG_PANEL = (24, 28, 38)
-BG_PANEL_ALT = (32, 38, 52)
-BG_PANEL_BORDER = (55, 68, 92)
-BG_GRID_A = (28, 32, 42)
-BG_GRID_B = (32, 37, 48)
-GRID_LINE_COLOR = (42, 50, 68)
+BG_DARK = (14, 16, 22)
+BG_PANEL = (22, 26, 36)
+BG_PANEL_ALT = (30, 36, 50)
+BG_PANEL_BORDER = (52, 64, 88)
+BG_GRID_A = (26, 30, 40)
+BG_GRID_B = (30, 35, 46)
+GRID_LINE_COLOR = (40, 48, 64)
 
 TEXT_COLOR = (235, 240, 245)
 TEXT_MUTED = (150, 162, 178)
-TEXT_GOLD = (255, 210, 60)
+TEXT_GOLD = (255, 215, 55)
 TEXT_GREEN = (80, 230, 120)
 TEXT_RED = (255, 80, 80)
 TEXT_BLUE = (80, 180, 255)
