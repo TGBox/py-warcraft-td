@@ -95,6 +95,16 @@ def get_weak_against(elem: Element) -> Optional[Element]:
     return ELEMENT_CIRCLE[(idx - 1) % len(ELEMENT_CIRCLE)]
 
 
+def get_armor_weakness(armor_elem: Element) -> Optional[Element]:
+    """Get the attacking element that deals 200% damage against this armor element."""
+    return get_weak_against(armor_elem)
+
+
+def get_armor_resistance(armor_elem: Element) -> Optional[Element]:
+    """Get the attacking element that is resisted (deals only 50% damage) by this armor element."""
+    return get_strong_against(armor_elem)
+
+
 def get_element_color(elem: Element) -> Tuple[Tuple[int, int, int], Tuple[int, int, int]]:
     """Return primary and secondary RGB colors for an element."""
     return ELEMENT_COLORS.get(elem.value, ELEMENT_COLORS["NONE"])

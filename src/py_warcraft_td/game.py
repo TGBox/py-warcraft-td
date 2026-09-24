@@ -115,8 +115,17 @@ class Game:
         # Selection and Eraser state
         self.selected_build_def: Optional[TowerDefinition] = None
         self.selected_placed_tower: Optional[Tower] = None
+        self.selected_creep: Optional[Creep] = None
         self.is_eraser_mode: bool = False
         self.cached_ground_path: Optional[List[GridCoord]] = None
+
+    def _quit_game(self) -> None:
+        """Quit the game application."""
+        self.running = False
+
+    def _deselect_creep(self) -> None:
+        """Deselect currently inspected creep."""
+        self.selected_creep = None
 
     def toggle_eraser_mode(self) -> None:
         """Toggle fast demolish/eraser mode for erasing towers."""
@@ -124,6 +133,7 @@ class Game:
         if self.is_eraser_mode:
             self.selected_build_def = None
             self.selected_placed_tower = None
+            self.selected_creep = None
             self.audio.play("ui_click", volume=0.4)
             self.vfx.add_floating_text(
                 "Löschen-Modus aktiv!", self.layout.screen_width // 2, 85, (255, 110, 130)
@@ -188,6 +198,7 @@ class Game:
 
         self.selected_build_def = None
         self.selected_placed_tower = None
+        self.selected_creep = None
         self.cached_ground_path = self.pathfinder.astar(self.layout.spawn_cell, self.layout.goal_cell, set())
         self.game_state = "PLAYING"
 
@@ -243,6 +254,8 @@ class Game:
                         self.show_guardian_modal = False
                     elif self.is_eraser_mode:
                         self.is_eraser_mode = False
+                    elif self.selected_creep:
+                        self.selected_creep = None
                     elif self.selected_build_def:
                         self.selected_build_def = None
                     elif self.selected_placed_tower:
@@ -269,24 +282,47 @@ class Game:
                     continue
 
                 if self.game_state == "PLAYING" and not self.show_guardian_modal:
-                    grid_coord = self.layout.pixel_to_grid(mouse_pos)
-                    if grid_coord:
-                        if self.is_eraser_mode:
-                            # Immediate demolition without confirmation
-                            if grid_coord in self.towers:
-                                self._try_sell_tower(self.towers[grid_coord])
-                        elif self.selected_build_def:
-                            self._try_place_tower(grid_coord, self.selected_build_def)
-                        else:
-                            if grid_coord in self.towers:
-                                self.selected_placed_tower = self.towers[grid_coord]
-                                self.audio.play("ui_click", volume=0.3)
+                    # Check if user clicked on any alive creep on the field first
+                    clicked_creep = None
+                    if not self.is_eraser_mode and not self.selected_build_def:
+                        best_dist = 999999.0
+                        for c in reversed(self.creeps):
+                            if not c.is_dead and not c.has_leaked:
+                                dist = math.hypot(c.x - mouse_pos[0], c.y - mouse_pos[1])
+                                if dist <= (c.radius + 8) and dist < best_dist:
+                                    clicked_creep = c
+                                    best_dist = dist
+
+                    if clicked_creep:
+                        self.selected_creep = clicked_creep
+                        self.selected_placed_tower = None
+                        self.selected_build_def = None
+                        self.audio.play("ui_click", volume=0.3)
+                    else:
+                        grid_coord = self.layout.pixel_to_grid(mouse_pos)
+                        if grid_coord:
+                            if self.is_eraser_mode:
+                                # Immediate demolition without confirmation
+                                if grid_coord in self.towers:
+                                    self._try_sell_tower(self.towers[grid_coord])
+                            elif self.selected_build_def:
+                                self._try_place_tower(grid_coord, self.selected_build_def)
                             else:
-                                self.selected_placed_tower = None
+                                if grid_coord in self.towers:
+                                    self.selected_placed_tower = self.towers[grid_coord]
+                                    self.selected_creep = None
+                                    self.audio.play("ui_click", volume=0.3)
+                                else:
+                                    self.selected_placed_tower = None
+                                    self.selected_creep = None
+                        else:
+                            # Clicked outside grid
+                            self.selected_creep = None
 
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 self.selected_build_def = None
                 self.selected_placed_tower = None
+                self.selected_creep = None
                 self.is_eraser_mode = False
 
     def _try_place_tower(self, coord: GridCoord, tower_def: TowerDefinition) -> None:
@@ -421,6 +457,8 @@ class Game:
 
         # 7. Remove dead creeps
         self.creeps = [c for c in self.creeps if not c.is_dead]
+        if self.selected_creep and (self.selected_creep.is_dead or self.selected_creep.has_leaked):
+            self.selected_creep = None
 
         # 8. Particles & VFX
         self.vfx.update(effective_dt)
@@ -517,6 +555,18 @@ class Game:
         for c in self.creeps:
             c.draw(self.screen)
 
+        # 3b. Selected Creep Targeting Reticle
+        if self.selected_creep and not self.selected_creep.is_dead and not self.selected_creep.has_leaked:
+            sc = self.selected_creep
+            r = sc.radius + 7
+            pygame.draw.circle(self.screen, (255, 230, 80), (int(sc.x), int(sc.y)), int(r), width=2)
+            for angle in [0, math.pi / 2, math.pi, 3 * math.pi / 2]:
+                cx1 = sc.x + math.cos(angle) * (r - 2)
+                cy1 = sc.y + math.sin(angle) * (r - 2)
+                cx2 = sc.x + math.cos(angle) * (r + 6)
+                cy2 = sc.y + math.sin(angle) * (r + 6)
+                pygame.draw.line(self.screen, (255, 255, 120), (cx1, cy1), (cx2, cy2), 2)
+
         # 4. Projectiles, Beams, Lightning
         for p in self.projectiles:
             p.draw(self.screen)
@@ -551,6 +601,7 @@ class Game:
         # 8. Top Resource Bar
         next_cfg = self.wave_schedule[self.current_wave_index] if self.current_wave_index < len(self.wave_schedule) else None
         current_wave_num = self.current_wave_index + 1 if self.current_wave_index < len(self.wave_schedule) else len(self.wave_schedule)
+        active_creeps_count = sum(1 for c in self.creeps if not c.is_dead and not c.has_leaked)
 
         def toggle_speed():
             self.game_speed = 2.0 if self.game_speed == 1.0 else (4.0 if self.game_speed == 2.0 else 1.0)
@@ -581,12 +632,15 @@ class Game:
             self.toggle_fullscreen,
             self.toggle_eraser_mode,
             open_summon,
+            active_creeps_count=active_creeps_count,
+            on_exit_click=self._return_to_menu,
         )
 
         # 9. Sidebar Build & Inspector
         def on_select_build(tdef: TowerDefinition):
             self.selected_build_def = tdef
             self.selected_placed_tower = None
+            self.selected_creep = None
             self.is_eraser_mode = False
 
         self.ui.draw_sidebar(
@@ -599,6 +653,8 @@ class Game:
             self._try_upgrade_tower,
             self._try_sell_tower,
             is_eraser_mode=self.is_eraser_mode,
+            selected_creep=self.selected_creep,
+            on_deselect_creep=self._deselect_creep,
         )
 
         # 10. Guardian Summon Altar Modal
@@ -720,13 +776,23 @@ class Game:
         self.screen.blit(fs_surf, (fs_btn_rect.centerx - fs_surf.get_width() // 2, fs_btn_rect.centery - fs_surf.get_height() // 2))
         self.ui.add_clickable(fs_btn_rect, self.toggle_fullscreen)
 
-        # 4. Start Button
-        start_rect = pygame.Rect(box_rect.x + 50, box_rect.bottom - 75, box_rect.width - 100, 54)
+        # 4. Start & Exit Buttons
+        btn_y = box_rect.bottom - 72
+        start_rect = pygame.Rect(box_rect.x + 30, btn_y, 350, 50)
         pygame.draw.rect(self.screen, (30, 85, 45), start_rect, border_radius=8)
         pygame.draw.rect(self.screen, TEXT_GREEN, start_rect, width=2, border_radius=8)
         st_txt = self.ui.font_title.render("SPIEL STARTEN", True, (255, 255, 255))
         self.screen.blit(st_txt, (start_rect.centerx - st_txt.get_width() // 2, start_rect.centery - st_txt.get_height() // 2))
         self.ui.add_clickable(start_rect, lambda: self.start_game(self.mode_total_waves, self.difficulty_name))
+
+        exit_btn_rect = pygame.Rect(box_rect.x + 400, btn_y, 210, 50)
+        pygame.draw.rect(self.screen, (55, 22, 26), exit_btn_rect, border_radius=8)
+        pygame.draw.rect(self.screen, (220, 70, 70), exit_btn_rect, width=2, border_radius=8)
+        exit_ico = IconRenderer.get_icon("exit", 22)
+        self.screen.blit(exit_ico, (exit_btn_rect.x + 20, exit_btn_rect.y + 14))
+        exit_txt = self.ui.font_bold.render("BEENDEN", True, (255, 140, 140))
+        self.screen.blit(exit_txt, (exit_btn_rect.x + 54, exit_btn_rect.centery - exit_txt.get_height() // 2))
+        self.ui.add_clickable(exit_btn_rect, self._quit_game)
 
     def _set_mode(self, waves: int) -> None:
         self.mode_total_waves = waves
@@ -770,12 +836,22 @@ class Game:
             self.screen.blit(ks, (card_rect.x + 30, sy))
             self.screen.blit(vs, (card_rect.right - vs.get_width() - 30, sy))
 
-        re_rect = pygame.Rect(sw // 2 - 150, 510, 300, 52)
+        btn_y = 510
+        re_rect = pygame.Rect(sw // 2 - 220, btn_y, 200, 52)
         pygame.draw.rect(self.screen, BG_PANEL_ALT, re_rect, border_radius=8)
         pygame.draw.rect(self.screen, TEXT_GOLD, re_rect, width=2, border_radius=8)
         re_lbl = self.ui.font_large.render("Hauptmenü", True, TEXT_GOLD)
         self.screen.blit(re_lbl, (re_rect.centerx - re_lbl.get_width() // 2, re_rect.centery - re_lbl.get_height() // 2))
         self.ui.add_clickable(re_rect, self._return_to_menu)
+
+        exit_end_rect = pygame.Rect(sw // 2 + 20, btn_y, 200, 52)
+        pygame.draw.rect(self.screen, (55, 22, 26), exit_end_rect, border_radius=8)
+        pygame.draw.rect(self.screen, (220, 70, 70), exit_end_rect, width=2, border_radius=8)
+        exit_ico = IconRenderer.get_icon("exit", 22)
+        self.screen.blit(exit_ico, (exit_end_rect.x + 22, exit_end_rect.y + 15))
+        exit_lbl = self.ui.font_large.render("Beenden", True, (255, 140, 140))
+        self.screen.blit(exit_lbl, (exit_end_rect.x + 58, exit_end_rect.centery - exit_lbl.get_height() // 2))
+        self.ui.add_clickable(exit_end_rect, self._quit_game)
 
     def _return_to_menu(self) -> None:
         self.game_state = "START_MENU"

@@ -82,15 +82,35 @@ $$\text{Licht} \rightarrow \text{Dunkelheit} \rightarrow \text{Wasser} \rightarr
 
 ---
 
+### 6. Gegner-Inspektion & Einheiten-Counter
+
+- **Live-Einheiten-Zähler:** Zeigt in der oberen Statusleiste stets die exakte Anzahl der gegenwärtig auf der Karte lebenden gegnerischen Monster an (mit Monster-Vektor-Icon).
+- **Gegner-Inspektor:** Jederzeit kann eine gegnerische Einheit direkt auf dem Spielfeld angeklickt werden:
+  - **Detaillierte Lebensanzeige:** Exakter numerischer Wert und Prozentangabe (z. B. `1.420 / 2.500 HP (56.8%)`) mit farblich dynamischem Lebensbalken.
+  - **Elementar-Schwäche (200% Schaden):** Zeigt sofort an, welches Element 200% Schaden gegen den Rüstungstyp dieser Einheit verursacht.
+  - **Resistenz (50% Schaden):** Weist das Element aus, das nur halben Schaden anrichtet.
+  - **Einheiten-Attribute:** Bewegungsart (Boden/Fliegend), Modifikator (Standard, Schnell, Tank, Boss, etc.), Basis- und Echtzeit-Geschwindigkeit, Wegstrecke und Kopfgeld.
+  - **Aktive Statuseffekte:** Echtzeit-Übersicht aller Verlangsamungen, Verbrennungen, Gifteffekte, Rüstungsschwächungen und Betäubungen mit Restdauer.
+  - **Ziel-Fadenkreuz:** Ausgewählte Einheiten werden auf dem Spielfeld mit einem goldenen Zielsucher markiert.
+
+### 7. Spiel beenden & Navigation
+
+- **Im Hauptmenü:** Ein roter Button **"BEENDEN"** beendet das Spiel sofort.
+- **Während des Spiels:** Über den **"Beenden"**-Button in der oberen Leiste (oder `Esc`) gelangst du zurück ins Hauptmenü.
+- **Auf dem Sieg-/Niederlage-Bildschirm:** Auswahl zwischen **"Hauptmenü"** und **"Beenden"**.
+
+---
+
 ## 🕹️ Steuerung & Tastenkürzel
 
 | Taste / Aktion | Funktion |
 | :--- | :--- |
 | **`F11`** | **Vollbildmodus aktivieren / deaktivieren** |
 | **`X` / `Entf`** | **Löschen- / Radierer-Modus umschalten** (Türme einzeln oder mit gedrückter Maustaste abreißen) |
-| **Linksklick** | Turm auswählen, bauen, inspizieren, abreißen oder Menüs bedienen |
+| **Linksklick auf Einheit** | **Gegner inspizieren** (Numerische HP, Elementarschwäche, Resistenz, Statuseffekte) |
+| **Linksklick auf Feld/Turm** | Turm auswählen, bauen, inspizieren, abreißen oder Menüs bedienen |
 | **Gedrückt halten & Ziehen (im Löschmodus)** | **Radierer:** Zieht über mehrere Türme, um sie blitzschnell ohne Abfrage zu verkaufen! |
-| **Rechtsklick / Esc** | Bauen abbrechen / Löschmodus beenden / Turmauswahl aufheben |
+| **Rechtsklick / Esc** | Bauen abbrechen / Löschmodus beenden / Turm- oder Einheiten-Auswahl aufheben |
 | **Leertaste (`Space`)** | Spiel pausieren / fortsetzen |
 | **`1`, `2`, `3`** | Spielgeschwindigkeit (1x, 2x, 4x) |
 | **`U`** | Ausgewählten Turm verbessern (Upgrade) |

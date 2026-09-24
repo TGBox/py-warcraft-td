@@ -188,6 +188,26 @@ class IconRenderer:
             pygame.draw.circle(surf, (25, 25, 30), (cx - s * 0.12, cy - s * 0.08), max(1.5, s * 0.09))
             pygame.draw.circle(surf, (25, 25, 30), (cx + s * 0.12, cy - s * 0.08), max(1.5, s * 0.09))
 
+        elif name == "exit" or name == "quit":
+            # Doorway with red exit arrow
+            col = (245, 85, 95)
+            # Door frame
+            pygame.draw.lines(surf, (200, 210, 225), False, [(cx, s * 0.18), (s * 0.20, s * 0.18), (s * 0.20, s * 0.82), (cx, s * 0.82)], max(2, int(s * 0.1)))
+            # Arrow pointing right
+            pygame.draw.line(surf, col, (s * 0.32, cy), (s * 0.76, cy), max(2, int(s * 0.1)))
+            pygame.draw.polygon(surf, col, [(s * 0.82, cy), (s * 0.58, cy - s * 0.18), (s * 0.58, cy + s * 0.18)])
+
+        elif name == "monster" or name == "creep":
+            # Horned minion icon
+            col = (255, 105, 115)
+            pygame.draw.circle(surf, col, (cx, cy), s * 0.32)
+            # Horns
+            pygame.draw.polygon(surf, (220, 75, 85), [(cx - s * 0.25, cy - s * 0.1), (cx - s * 0.35, cy - s * 0.38), (cx - s * 0.10, cy - s * 0.25)])
+            pygame.draw.polygon(surf, (220, 75, 85), [(cx + s * 0.25, cy - s * 0.1), (cx + s * 0.35, cy - s * 0.38), (cx + s * 0.10, cy - s * 0.25)])
+            # Glowing eyes
+            pygame.draw.circle(surf, (255, 235, 80), (cx - s * 0.10, cy - s * 0.05), max(1.5, s * 0.08))
+            pygame.draw.circle(surf, (255, 235, 80), (cx + s * 0.10, cy - s * 0.05), max(1.5, s * 0.08))
+
         # --- 6 ELEMENT BADGES ---
         elif name == "elem_light":
             # 8-point Radiant Star / Sun
