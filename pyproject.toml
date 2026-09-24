@@ -1,0 +1,20 @@
+[project]
+name = "py-warcraft-td"
+version = "0.1.0"
+description = "A python game adaptation of the warcraft 3 tower defence maps."
+readme = "README.md"
+authors = [
+    { name = "Daniel Rösch", email = "droesch91@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+dev-dependencies = [
+    "pyinstaller"
+]
+
+[project.scripts]
+py-warcraft-td = "py_warcraft_td:main"
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"
