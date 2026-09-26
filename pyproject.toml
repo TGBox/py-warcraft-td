@@ -17,6 +17,7 @@ dev-dependencies = [
 
 [project.scripts]
 py-warcraft-td = "py_warcraft_td:main"
+main = "py_warcraft_td:main"
 
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]
